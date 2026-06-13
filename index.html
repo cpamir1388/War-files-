@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>War Files</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060610;--card:#111120;--border:rgba(220,38,38,0.2);--border2:rgba(220,38,38,0.08);
+  --red:#dc2626;--red2:#ef4444;--red-glow:rgba(220,38,38,0.35);
+  --gold:#f59e0b;--text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Vazirmatn','Inter',sans-serif;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(220,38,38,0.12) 0%,transparent 65%);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(220,38,38,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(220,38,38,0.03) 1px,transparent 1px);background-size:56px 56px;pointer-events:none;z-index:0}
+.scanline{position:fixed;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,rgba(220,38,38,0.4),transparent);animation:scan 4s linear infinite;z-index:999;pointer-events:none}
+@keyframes scan{from{top:-2px}to{top:100vh}}
+nav{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--border2);background:rgba(6,6,16,0.85);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
+.nav-brand{font-family:'Orbitron',monospace;font-weight:900;font-size:1.3rem;letter-spacing:0.15em;background:linear-gradient(135deg,#fca5a5,#dc2626,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-brand small{font-size:0.5em;letter-spacing:0.3em;display:block;opacity:0.6;margin-top:2px}
+.nav-btn{padding:7px 18px;border-radius:8px;font-size:0.78rem;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--red2);cursor:pointer;letter-spacing:0.05em;transition:all 0.2s;font-family:'Vazirmatn',sans-serif}
+.nav-btn:hover{background:rgba(220,38,38,0.12)}
+.hero{padding:48px 32px 28px;text-align:center;position:relative;z-index:1}
+.hero h1{font-family:'Orbitron',monospace;font-weight:900;font-size:clamp(2.2rem,7vw,4rem);letter-spacing:0.1em;background:linear-gradient(135deg,#fca5a5 0%,#dc2626 45%,#f59e0b 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{margin-top:10px;color:var(--muted2);font-size:0.88rem;font-weight:300}
+.stats{display:flex;justify-content:center;gap:32px;margin-top:20px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.stat-val{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:700;color:var(--red2)}
+.stat-lbl{font-size:0.7rem;color:var(--muted);letter-spacing:0.1em}
+.content{max-width:1100px;margin:0 auto;padding:0 24px 48px;position:relative;z-index:1}
+.tabs{display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--border2);padding-bottom:0;flex-wrap:wrap}
+.tab{padding:9px 20px;font-size:0.8rem;font-weight:600;letter-spacing:0.06em;border:none;background:transparent;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s;font-family:'Vazirmatn',sans-serif}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--red2);border-bottom-color:var(--red2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--border2);border-radius:16px;overflow:hidden;transition:all 0.3s;animation:fadeUp 0.4s ease both}
+.card:hover{border-color:rgba(220,38,38,0.45);box-shadow:0 8px 32px rgba(220,38,38,0.15);transform:translateY(-3px)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.preview{width:100%;aspect-ratio:16/10;background:#08080f;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.preview img,.preview video{width:100%;height:100%;object-fit:cover}
+.preview audio{width:88%;margin:auto}
+.preview iframe{width:100%;height:100%;border:none;background:#fff}
+.icon-big{font-size:2.8rem;opacity:0.5}
+.badge{position:absolute;top:8px;right:8px;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
+.b-image{background:rgba(244,114,182,0.2);color:#f472b6;border:1px solid rgba(244,114,182,0.3)}
+.b-video{background:rgba(52,211,153,0.2);color:#34d399;border:1px solid rgba(52,211,153,0.3)}
+.b-audio{background:rgba(251,191,36,0.2);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)}
+.b-pdf{background:rgba(248,113,113,0.2);color:#f87171;border:1px solid rgba(248,113,113,0.3)}
+.b-link{background:rgba(96,165,250,0.2);color:#60a5fa;border:1px solid rgba(96,165,250,0.3)}
+.b-other{background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.2)}
+.info{padding:14px 16px}
+.fname{font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.fdesc{font-size:0.75rem;color:var(--muted2);margin-bottom:12px;line-height:1.5;min-height:16px}
+.actions{display:flex;gap:8px}
+.btn-v,.btn-d{flex:1;padding:8px 0;border-radius:8px;font-size:0.78rem;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s;text-decoration:none;font-family:'Vazirmatn',sans-serif}
+.btn-v{background:rgba(220,38,38,0.13);color:#fca5a5;border:1px solid rgba(220,38,38,0.25)}
+.btn-v:hover{background:rgba(220,38,38,0.26)}
+.btn-d{background:rgba(245,158,11,0.12);color:#fcd34d;border:1px solid rgba(245,158,11,0.22)}
+.btn-d:hover{background:rgba(245,158,11,0.25)}
+.empty{grid-column:1/-1;text-align:center;padding:64px 20px;color:var(--muted)}
+.empty .ei{font-size:3rem;margin-bottom:14px;opacity:0.4}
+.loading{grid-column:1/-1;text-align:center;padding:64px 20px;color:var(--muted)}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--red2);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.9);backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:20px}
+#modal.open{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:20px;width:100%;max-width:920px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.7),0 0 60px var(--red-glow)}
+.modal-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border2);flex-shrink:0}
+.modal-fname{font-size:0.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75%}
+.modal-close{width:32px;height:32px;border-radius:50%;background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.25);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.modal-close:hover{background:rgba(248,113,113,0.28)}
+.modal-body{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;min-height:0}
+.modal-body img{max-width:100%;max-height:72vh;border-radius:8px;object-fit:contain}
+.modal-body video,.modal-body audio{max-width:100%}
+.modal-body iframe{width:100%;height:72vh;border:none;background:#fff;border-radius:8px}
+.site-footer{padding:40px 20px 28px;text-align:center;position:relative;z-index:1}
+.footer-inner{display:inline-flex;flex-direction:column;align-items:center;gap:14px;padding:26px 40px;border:1px solid var(--border);border-radius:20px;background:rgba(220,38,38,0.04)}
+.footer-made{font-size:0.78rem;color:var(--muted);letter-spacing:0.08em}
+.footer-by{font-family:'Orbitron',monospace;font-size:0.95rem;font-weight:700;letter-spacing:0.18em;background:linear-gradient(135deg,#fca5a5,#dc2626,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tg-link{display:inline-flex;align-items:center;gap:10px;padding:9px 20px;border-radius:50px;background:linear-gradient(135deg,rgba(0,136,204,0.15),rgba(0,136,204,0.28));border:1px solid rgba(0,136,204,0.3);color:#38bdf8;text-decoration:none;font-size:0.86rem;font-weight:600;transition:all 0.25s}
+.tg-link:hover{box-shadow:0 4px 18px rgba(0,136,204,0.28);transform:translateY(-2px)}
+.tg-icon{width:22px;height:22px;border-radius:50%;background:#0088cc;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.tg-icon svg{width:13px;height:13px;fill:white}
+#admin-panel{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.95);backdrop-filter:blur(16px);overflow-y:auto}
+.admin-wrap{max-width:700px;margin:0 auto;padding:32px 20px}
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+.admin-title{font-family:'Orbitron',monospace;font-weight:700;font-size:1.1rem;letter-spacing:0.15em;background:linear-gradient(135deg,#fca5a5,#dc2626);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.close-admin{padding:8px 18px;border-radius:8px;font-size:0.8rem;font-weight:600;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:#f87171;cursor:pointer;font-family:'Vazirmatn',sans-serif;transition:all 0.2s}
+.close-admin:hover{background:rgba(248,113,113,0.22)}
+#login-wrap{text-align:center;padding:48px 20px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px 36px;max-width:380px;margin:0 auto;box-shadow:0 0 60px var(--red-glow)}
+.login-ico{font-size:2.8rem;margin-bottom:8px;filter:drop-shadow(0 0 10px rgba(220,38,38,0.5))}
+.login-t{font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;letter-spacing:0.15em;color:var(--red2);margin-bottom:24px}
+.fl{display:block;font-size:0.73rem;font-weight:600;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;text-align:right}
+.fi{width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;transition:all 0.25s;margin-bottom:16px;direction:ltr;font-family:'Vazirmatn',sans-serif}
+.fi:focus{border-color:var(--red2);box-shadow:0 0 0 3px rgba(220,38,38,0.1)}
+.fi::placeholder{color:var(--muted)}
+.login-btn{width:100%;padding:12px;border-radius:10px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:0.9rem;font-weight:700;border:none;cursor:pointer;letter-spacing:0.06em;font-family:'Vazirmatn',sans-serif;box-shadow:0 4px 18px rgba(220,38,38,0.35);transition:all 0.25s}
+.login-btn:hover{transform:translateY(-2px)}
+.login-err{display:none;color:#f87171;font-size:0.78rem;margin-top:12px;padding:8px;background:rgba(248,113,113,0.08);border-radius:8px;border:1px solid rgba(248,113,113,0.2)}
+#admin-content{display:none}
+.sec-title{font-size:0.72rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--red2);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.sec{margin-bottom:32px}
+.add-form{background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:22px}
+.form-row{display:flex;gap:10px;margin-bottom:10px}
+.inp{flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.85rem;outline:none;transition:all 0.25s;font-family:'Vazirmatn',sans-serif}
+.inp[dir=ltr]{direction:ltr}
+.inp:focus{border-color:var(--red2);box-shadow:0 0 0 3px rgba(220,38,38,0.1)}
+.inp::placeholder{color:var(--muted)}
+.add-btn{padding:11px 22px;border-radius:10px;background:linear-gradient(135deg,#dc2626,#f59e0b);color:#fff;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:'Vazirmatn',sans-serif;box-shadow:0 4px 16px rgba(220,38,38,0.3)}
+.add-btn:hover{transform:scale(1.03)}
+.add-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.file-list{display:flex;flex-direction:column;gap:8px}
+.file-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border2);border-radius:12px;transition:all 0.2s}
+.file-item:hover{border-color:rgba(220,38,38,0.3)}
+.file-thumb{width:48px;height:36px;border-radius:6px;background:#08080f;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;overflow:hidden}
+.file-thumb img{width:100%;height:100%;object-fit:cover}
+.file-meta{flex:1;min-width:0}
+.file-n{font-size:0.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-s{font-size:0.71rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr}
+.del-btn{padding:5px 12px;border-radius:7px;font-size:0.73rem;font-weight:600;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.2);color:#f87171;cursor:pointer;transition:all 0.2s;flex-shrink:0;font-family:'Vazirmatn',sans-serif}
+.del-btn:hover{background:rgba(248,113,113,0.25)}
+.no-files{color:var(--muted);font-size:0.82rem;text-align:center;padding:28px;opacity:0.6}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:0.82rem;color:var(--text);opacity:0;transition:all 0.3s;z-index:500;white-space:nowrap;box-shadow:0 8px 28px rgba(0,0,0,0.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}nav{padding:14px 16px}.form-row{flex-direction:column}.stats{gap:20px}}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+
+<nav>
+  <div class="nav-brand">WAR FILES<small>CLASSIFIED ARCHIVE</small></div>
+  <button class="nav-btn" onclick="openAdmin()">🔐 ادمین</button>
+</nav>
+
+<div class="hero">
+  <h1>WAR FILES</h1>
+  <p>آرشیو فایل‌های طبقه‌بندی‌شده</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-val" id="st-all">0</span><span class="stat-lbl">کل فایل</span></div>
+    <div class="stat"><span class="stat-val" id="st-vid">0</span><span class="stat-lbl">ویدیو</span></div>
+    <div class="stat"><span class="stat-val" id="st-img">0</span><span class="stat-lbl">تصویر</span></div>
+    <div class="stat"><span class="stat-val" id="st-lnk">0</span><span class="stat-lbl">لینک</span></div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="tabs">
+    <button class="tab active" onclick="filter('all',this)">همه</button>
+    <button class="tab" onclick="filter('video',this)">🎬 ویدیو</button>
+    <button class="tab" onclick="filter('image',this)">🖼 تصویر</button>
+    <button class="tab" onclick="filter('audio',this)">🎵 صدا</button>
+    <button class="tab" onclick="filter('pdf',this)">📄 PDF</button>
+    <button class="tab" onclick="filter('link',this)">🔗 لینک</button>
+  </div>
+  <div class="grid" id="grid">
+    <div class="loading"><div class="spinner"></div>در حال بارگذاری...</div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="footer-made">ساخته شده توسط</span>
+    <span class="footer-by">CPAMIR</span>
+    <a href="https://t.me/BreadpitB" target="_blank" class="tg-link">
+      <span class="tg-icon"><svg viewBox="0 0 24 24"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg></span>
+      @BreadpitB
+    </a>
+  </div>
+</footer>
+
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-bar">
+      <span class="modal-fname" id="modal-fname"></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div id="admin-panel">
+  <div class="admin-wrap">
+    <div id="login-wrap">
+      <div class="login-box">
+        <div class="login-ico">🛡️</div>
+        <div class="login-t">ADMIN ACCESS</div>
+        <label class="fl">نام کاربری</label>
+        <input class="fi" id="u" type="text" placeholder="admin" autocomplete="off"/>
+        <label class="fl">رمز عبور</label>
+        <input class="fi" id="p" type="password" placeholder="••••••"/>
+        <button class="login-btn" onclick="doLogin()">ورود</button>
+        <div class="login-err" id="lerr">❌ نام کاربری یا رمز اشتباه</div>
+        <div style="margin-top:18px">
+          <button onclick="closeAdmin()" style="background:none;border:none;color:var(--muted);font-size:0.78rem;cursor:pointer;font-family:'Vazirmatn',sans-serif">← بازگشت</button>
+        </div>
+      </div>
+    </div>
+    <div id="admin-content">
+      <div class="admin-header">
+        <div class="admin-title">🛡️ ADMIN PANEL</div>
+        <button class="close-admin" onclick="doLogout()">خروج ↩</button>
+      </div>
+      <div class="sec">
+        <div class="sec-title">افزودن فایل / لینک</div>
+        <div class="add-form">
+          <div class="form-row">
+            <input class="inp" id="al-url" type="url" placeholder="لینک مستقیم فایل" dir="ltr"/>
+            <input class="inp" id="al-name" type="text" placeholder="اسم فایل"/>
+          </div>
+          <div class="form-row">
+            <input class="inp" id="al-desc" type="text" placeholder="توضیح (اختیاری)"/>
+            <button class="add-btn" id="add-btn" onclick="addItem()">+ افزودن</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">فایل‌های ذخیره‌شده (<span id="admin-count">0</span>)</div>
+        <div class="file-list" id="admin-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://qsotfkigzxvioavwccde.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzb3Rma2lnenh2aW9hdndjY2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTI0NDYsImV4cCI6MjA5NjkyODQ0Nn0.URkLByRHCmMExJ6Y1iKg7pGVVWAitjUOZGl7_AGQLlM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = '1234';
+let allFiles = [];
+let currentFilter = 'all';
+let loggedIn = false;
+
+function guessType(url){
+  const c=(url||'').split('?')[0].toLowerCase();
+  if(/\.(jpg|jpeg|png|gif|webp|svg|avif|bmp)$/.test(c)) return 'image';
+  if(/\.(mp4|webm|ogg|mov|mkv|avi)$/.test(c)) return 'video';
+  if(/\.(mp3|wav|flac|aac|m4a|opus)$/.test(c)) return 'audio';
+  if(/\.pdf$/.test(c)) return 'pdf';
+  return 'link';
+}
+function typeIcon(t){return {image:'🖼',video:'🎬',audio:'🎵',pdf:'📄',link:'🔗',other:'📁'}[t]||'📁'}
+function esc(u){return (u||'').replace(/'/g,"\\'")}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+async function loadFiles(){
+  const {data,error} = await sb.from('files').select('*').order('created_at',{ascending:false});
+  if(error){console.error(error);return;}
+  allFiles = data||[];
+  render();
+}
+
+function render(){
+  const grid = document.getElementById('grid');
+  const shown = currentFilter==='all' ? allFiles : allFiles.filter(f=>f.type===currentFilter);
+  document.getElementById('st-all').textContent = allFiles.length;
+  document.getElementById('st-vid').textContent = allFiles.filter(f=>f.type==='video').length;
+  document.getElementById('st-img').textContent = allFiles.filter(f=>f.type==='image').length;
+  document.getElementById('st-lnk').textContent = allFiles.filter(f=>f.type==='link').length;
+
+  if(!shown.length){
+    grid.innerHTML=`<div class="empty"><div class="ei">📂</div><p>${allFiles.length?'فایلی در این دسته نیست':'هنوز فایلی اضافه نشده'}</p></div>`;
+    return;
+  }
+  grid.innerHTML = shown.map(f=>`
+    <div class="card">
+      <div class="preview">
+        ${previewHtml(f)}
+        <span class="badge b-${f.type||'link'}">${f.type||'link'}</span>
+      </div>
+      <div class="info">
+        <div class="fname">${f.name}</div>
+        <div class="fdesc">${f.desc||''}</div>
+        <div class="actions">
+          <button class="btn-v" onclick="openModal('${esc(f.url)}','${encodeURIComponent(f.name)}','${f.type}')">👁 مشاهده</button>
+          <a class="btn-d" href="${esc(f.url)}" download="${f.name}" target="_blank">⬇ دانلود</a>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function previewHtml(f){
+  if(f.type==='image') return `<img src="${f.url}" loading="lazy" onerror="this.outerHTML='<span class=\\'icon-big\\'>🖼</span>'"/>`;
+  if(f.type==='video') return `<video src="${f.url}" muted loop autoplay playsinline></video>`;
+  if(f.type==='audio') return `<audio src="${f.url}" controls></audio>`;
+  if(f.type==='pdf')   return `<iframe src="${f.url}#toolbar=0"></iframe>`;
+  return `<span class="icon-big">${typeIcon(f.type)}</span>`;
+}
+
+function filter(type,el){
+  currentFilter=type;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function openModal(url,name,type){
+  document.getElementById('modal-fname').textContent=decodeURIComponent(name);
+  const mb=document.getElementById('modal-body');mb.innerHTML='';
+  let el;
+  if(type==='image'){el=document.createElement('img');el.src=url;}
+  else if(type==='video'){el=document.createElement('video');el.src=url;el.controls=true;el.autoplay=true;}
+  else if(type==='audio'){el=document.createElement('audio');el.src=url;el.controls=true;}
+  else if(type==='pdf'){el=document.createElement('iframe');el.src=url;}
+  else{mb.innerHTML=`<p style="color:var(--muted2);text-align:center">پیش‌نمایش موجود نیست<br/><a href="${url}" target="_blank" style="color:var(--red2);margin-top:10px;display:inline-block">باز کردن لینک ↗</a></p>`;document.getElementById('modal').classList.add('open');return;}
+  mb.appendChild(el);
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  const mb=document.getElementById('modal-body');
+  const v=mb.querySelector('video');if(v)v.pause();
+  mb.innerHTML='';
+}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+function openAdmin(){
+  document.getElementById('admin-panel').style.display='block';
+  if(loggedIn){showAdminContent();}
+  else{document.getElementById('login-wrap').style.display='block';document.getElementById('admin-content').style.display='none';}
+}
+function closeAdmin(){document.getElementById('admin-panel').style.display='none';}
+function doLogin(){
+  const u=document.getElementById('u').value.trim();
+  const p=document.getElementById('p').value;
+  if(u===ADMIN_USER&&p===ADMIN_PASS){loggedIn=true;document.getElementById('lerr').style.display='none';showAdminContent();}
+  else{document.getElementById('lerr').style.display='block';}
+}
+document.getElementById('p').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+function doLogout(){loggedIn=false;document.getElementById('admin-panel').style.display='none';}
+function showAdminContent(){
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('admin-content').style.display='block';
+  renderAdmin();
+}
+
+async function addItem(){
+  const url=document.getElementById('al-url').value.trim();
+  const name=document.getElementById('al-name').value.trim();
+  const desc=document.getElementById('al-desc').value.trim();
+  if(!url||!/^https?:\/\/.+/.test(url)){toast('⚠️ لینک معتبر وارد کن');return;}
+  const btn=document.getElementById('add-btn');
+  btn.disabled=true;btn.textContent='در حال ذخیره...';
+  const {error}=await sb.from('files').insert([{
+    url,
+    name:name||(url.split('/').pop().split('?')[0])||'فایل',
+    desc,
+    type:guessType(url)
+  }]);
+  btn.disabled=false;btn.textContent='+ افزودن';
+  if(error){toast('❌ خطا در ذخیره');console.error(error);return;}
+  document.getElementById('al-url').value='';
+  document.getElementById('al-name').value='';
+  document.getElementById('al-desc').value='';
+  toast('✅ فایل اضافه شد — همه میبینن!');
+  await loadFiles();
+  renderAdmin();
+}
+document.getElementById('al-url').addEventListener('keydown',e=>{if(e.key==='Enter')addItem()});
+
+async function deleteItem(id){
+  const {error}=await sb.from('files').delete().eq('id',id);
+  if(error){toast('❌ خطا در حذف');return;}
+  toast('🗑 حذف شد');
+  await loadFiles();
+  renderAdmin();
+}
+
+function renderAdmin(){
+  const list=document.getElementById('admin-list');
+  document.getElementById('admin-count').textContent=allFiles.length;
+  if(!allFiles.length){list.innerHTML='<div class="no-files">هنوز فایلی اضافه نشده</div>';return;}
+  list.innerHTML=allFiles.map(f=>`
+    <div class="file-item">
+      <div class="file-thumb">${f.type==='image'?`<img src="${f.url}" onerror="this.outerHTML='🖼'"/>`:typeIcon(f.type)}</div>
+      <div class="file-meta">
+        <div class="file-n">${typeIcon(f.type)} ${f.name}</div>
+        <div class="file-s">${f.url}</div>
+      </div>
+      <button class="del-btn" onclick="deleteItem(${f.id})">🗑</button>
+    </div>`).join('');
+}
+
+loadFiles();
+</script>
+</body>
+</html>
